@@ -1,1 +1,0 @@
-ref: [RailsGuides](https://rubykr.github.io/rails_guides/getting_started.html)
