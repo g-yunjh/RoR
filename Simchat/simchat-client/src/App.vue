@@ -1,22 +1,33 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { useChatStore } from './stores/chat'
 
 const store = useChatStore()
-const inputMsg = ref('')
+
+// --- 상태 변수들 ---
+const isLoggedIn = ref(false) // 로그인 했는지 여부
+const myName = ref('')        // 입력받을 내 닉네임
+const inputMsg = ref('')      // 채팅 입력값
 const messageContainer = ref(null) 
 
-// 테스트용 내 이름 (실제 앱에선 로그인 정보)
-const myName = ref('나') 
-
-onMounted(async () => {
+// --- 로그인(입장) 함수 ---
+const login = async () => {
+  if (!myName.value.trim()) {
+    alert("닉네임을 입력해주세요!")
+    return
+  }
+  
+  // 로그인 처리 (화면 전환)
+  isLoggedIn.value = true
+  
+  // 방 목록 가져오기 & 첫번째 방 입장
   await store.fetchRooms()
-  // 방이 있으면 첫 번째 방 자동 입장
   if (store.rooms.length > 0) {
     store.joinRoom(store.rooms[0].id)
   }
-})
+}
 
+// --- 채팅 관련 로직 ---
 // 메시지가 오면 스크롤을 맨 아래로 내림
 watch(() => store.messages.length, () => {
   nextTick(() => {
@@ -34,7 +45,22 @@ const send = async () => {
 </script>
 
 <template>
-  <div class="app-container">
+  <div v-if="!isLoggedIn" class="login-container">
+    <div class="login-card">
+      <h1>SimChat 입장 🚪</h1>
+      <p>사용할 닉네임을 입력하세요</p>
+      <input 
+        v-model="myName" 
+        @keyup.enter="login"
+        type="text" 
+        placeholder="예: 홍길동" 
+        autofocus
+      />
+      <button @click="login">입장하기</button>
+    </div>
+  </div>
+
+  <div v-else class="app-container">
     
     <aside class="sidebar">
       <div class="sidebar-header">SimChat 💬</div>
@@ -49,12 +75,11 @@ const send = async () => {
         </li>
       </ul>
       <div class="my-profile">
-        접속자: {{ myName }}
+        내 닉네임: <strong>{{ myName }}</strong>
       </div>
     </aside>
 
     <main class="chat-area">
-      
       <header class="chat-header">
         <h2>{{ store.rooms.find(r => r.id === store.currentRoom)?.name || '채팅방 선택' }}</h2>
       </header>
@@ -86,24 +111,73 @@ const send = async () => {
         />
         <button @click="send" :disabled="!inputMsg.trim()">전송</button>
       </div>
-
     </main>
   </div>
 </template>
 
 <style scoped>
-/* 전체 레이아웃 (Flexbox 사용) */
+/* --- 로그인 화면 스타일 --- */
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f0f2f5;
+  font-family: 'Apple SD Gothic Neo', sans-serif;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  width: 300px;
+}
+
+.login-card h1 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  margin: 20px 0;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box; /* 패딩 포함 크기 계산 */
+}
+
+.login-card button {
+  width: 100%;
+  padding: 12px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.login-card button:hover {
+  background-color: #2980b9;
+}
+
+/* --- 기존 채팅 스타일 (동일) --- */
 .app-container {
   display: flex;
-  height: 100vh; /* 화면 꽉 차게 */
-  font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  height: 100vh;
+  font-family: 'Apple SD Gothic Neo', sans-serif;
   color: #333;
 }
 
-/* --- 왼쪽 사이드바 --- */
 .sidebar {
   width: 240px;
-  background-color: #2c3e50; /* 짙은 남색 */
+  background-color: #2c3e50;
   color: white;
   display: flex;
   flex-direction: column;
@@ -142,7 +216,7 @@ const send = async () => {
 }
 
 .room-list button.active {
-  background-color: #3498db; /* 활성 상태 파란색 */
+  background-color: #3498db;
   color: white;
   font-weight: bold;
 }
@@ -154,12 +228,11 @@ const send = async () => {
   color: #95a5a6;
 }
 
-/* --- 오른쪽 채팅 영역 --- */
 .chat-area {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: #f0f2f5; /* 연한 회색 배경 */
+  background-color: #f0f2f5;
 }
 
 .chat-header {
@@ -171,7 +244,7 @@ const send = async () => {
 
 .messages-container {
   flex: 1;
-  overflow-y: auto; /* 스크롤 */
+  overflow-y: auto;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -184,11 +257,10 @@ const send = async () => {
   margin-top: 50px;
 }
 
-/* 메시지 말풍선 공통 */
 .message-wrapper {
   display: flex;
   flex-direction: column;
-  max-width: 70%; /* 말풍선 최대 너비 */
+  max-width: 70%;
 }
 
 .bubble {
@@ -207,30 +279,27 @@ const send = async () => {
   margin-left: 5px;
 }
 
-/* 내 메시지 (오른쪽, 파란색) */
 .my-message {
-  align-self: flex-end; /* 오른쪽 정렬 */
+  align-self: flex-end;
 }
 
 .my-message .bubble {
   background-color: #3498db;
   color: white;
-  border-bottom-right-radius: 0; /* 말풍선 꼬리 효과 */
+  border-bottom-right-radius: 0;
 }
 
-/* 남의 메시지 (왼쪽, 흰색) */
 .other-message {
-  align-self: flex-start; /* 왼쪽 정렬 */
+  align-self: flex-start;
 }
 
 .other-message .bubble {
   background-color: white;
   color: #333;
   border: 1px solid #ddd;
-  border-bottom-left-radius: 0; /* 말풍선 꼬리 효과 */
+  border-bottom-left-radius: 0;
 }
 
-/* 하단 입력창 */
 .input-area {
   padding: 20px;
   background-color: white;
