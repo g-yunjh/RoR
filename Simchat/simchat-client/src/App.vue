@@ -1,47 +1,45 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { ref, onMounted } from 'vue'
+import { useChatStore } from './stores/chat'
+
+const store = useChatStore()
+const inputMsg = ref('')
+const myName = ref('User' + Math.floor(Math.random() * 100)) // 임의 유저명
+
+onMounted(() => {
+  store.fetchRooms()
+})
+
+const send = () => {
+  if (!inputMsg.value) return
+  store.sendMessage(inputMsg.value, myName.value)
+  inputMsg.value = ''
+}
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <div style="display: flex; gap: 20px;">
+    <div style="width: 200px; border-right: 1px solid #ccc;">
+      <h3>채팅방 목록</h3>
+      <ul>
+        <li v-for="room in store.rooms" :key="room.id">
+          <button @click="store.joinRoom(room.id)">{{ room.name }} 입장</button>
+        </li>
+      </ul>
+      </div>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+    <div v-if="store.currentRoom" style="flex: 1;">
+      <h3>방 번호: {{ store.currentRoom }}</h3>
+      <div style="height: 300px; overflow-y: scroll; border: 1px solid #ddd; padding: 10px;">
+        <div v-for="msg in store.messages" :key="msg.id">
+          <strong>{{ msg.username }}:</strong> {{ msg.content }}
+        </div>
+      </div>
+      <input v-model="inputMsg" @keyup.enter="send" placeholder="메시지 입력..." />
+      <button @click="send">전송</button>
     </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+    <div v-else>
+      방을 선택해주세요.
+    </div>
+  </div>
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-}
-</style>
