@@ -3,7 +3,12 @@ class MessagesController < ApplicationController
 
   # GET /messages
   def index
-    @messages = Message.all
+    # room_id 파라미터가 있으면 그것만, 없으면 전부 다
+    if params[:room_id].present?
+      @messages = Message.where(room_id: params[:room_id])
+    else
+      @messages = Message.all
+    end
 
     render json: @messages
   end
